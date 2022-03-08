@@ -25,10 +25,8 @@ public class Movement : MonoBehaviour
     {
         if (current_Coroutine !=null)
             StopCoroutine(current_Coroutine);
-        if (point.magnitude<m_circle.Radius)
+//        if (point.magnitude<m_circle.Radius)
             current_Coroutine = StartCoroutine(MoveToPoint(point, m_time));
-        Debug.Log(point.magnitude);
-        Debug.Log(point);
     }
 
     private IEnumerator MoveToPoint(Vector3 toPoint, float time)
@@ -38,6 +36,9 @@ public class Movement : MonoBehaviour
         {
             var newPoint = Vector3.Lerp(transform.position, toPoint, m_time/time);
             newPoint.y = transform.position.y;
+            
+            if (newPoint.magnitude > m_circle.Radius) break; //ограничение за выход из окружности с центром в (0.0)
+            
             transform.position = newPoint;
             m_time += Time.deltaTime;
             if (m_time > time) break;
