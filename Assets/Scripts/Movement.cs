@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class Movement : MonoBehaviour
 {
-    private Rigidbody rb;
     [SerializeField] private float m_ImpulseVelocity;   //Сила с которой мы двигаемся 
     [SerializeField] private float m_StopVelocity;      //Сила с которой мы тормозим
     [SerializeField] private InputController m_inputController;
@@ -17,15 +16,12 @@ public class Movement : MonoBehaviour
     void Start()
     {
         m_inputController.mouseDown.AddListener(move);
-        rb = GetComponent<Rigidbody>();
-        if (rb == null) Debug.Log("RigidBody == null");
     }
 
     private void move(Vector3 point)
     {
         if (current_Coroutine !=null)
             StopCoroutine(current_Coroutine);
-//        if (point.magnitude<m_circle.Radius)
             current_Coroutine = StartCoroutine(MoveToPoint(point, m_time));
     }
 

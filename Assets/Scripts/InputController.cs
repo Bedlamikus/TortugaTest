@@ -24,6 +24,5 @@ public class InputController : MonoBehaviour
             Instantiate(particle, hit.point, Quaternion.identity);
             mouseDown?.Invoke(hit.point);
         }
-        Debug.DrawLine(ray.origin, hit.point, Color.green);
     }
 }
