@@ -5,12 +5,13 @@ using UnityEngine.Events;
 
 public class InputController : MonoBehaviour
 {
-    [SerializeField] private GameObject particle;
+   
     [SerializeField] private Camera m_camera;
-    RaycastHit hit;
+    RaycastHit currentHit;
     Ray ray;
 
-    public UnityEvent<Vector3> mouseDown;
+    public UnityEvent<RaycastHit> mouseDown;
+    public UnityEvent<RaycastHit> mouseUp;
 
 
 
@@ -20,9 +21,14 @@ public class InputController : MonoBehaviour
         if (Input.GetButtonDown("Fire1"))
         {
 
-            Physics.Raycast(ray, out hit, 100);
-            Instantiate(particle, hit.point, Quaternion.identity);
-            mouseDown?.Invoke(hit.point);
+            Physics.Raycast(ray, out currentHit, 100);
+            mouseDown?.Invoke(currentHit);
+        }
+        if (Input.GetButtonUp("Fire1"))
+        {
+
+            if (currentHit.collider == null) return;
+            mouseUp?.Invoke(currentHit);
         }
     }
 }
