@@ -7,6 +7,8 @@ public class Cube : MonoBehaviour
     [SerializeField] private CubeSettings settings;
     [SerializeField] private GameObject visual;
 
+    private Coroutine currentCoroutine;
+
     void Start()
     {
         var inputcontroller = FindObjectOfType<InputController>();
@@ -17,11 +19,16 @@ public class Cube : MonoBehaviour
         }
         inputcontroller.mouseDown.AddListener(UpScale);
         inputcontroller.mouseUp.AddListener(DownScale);
+        inputcontroller.mouseSelect.AddListener(Select);
+        inputcontroller.mouseUnSelect.AddListener(UnSelect);
     }
 
     private void UpScale(RaycastHit hit)
     {
-        c_UpScale();
+        if (HitOnMe(hit) == false) return;
+        if (currentCoroutine != null)
+            StopCoroutine(currentCoroutine);
+        currentCoroutine = StartCoroutine(c_UpScale());
     }
     IEnumerator c_UpScale()
     {
@@ -44,18 +51,26 @@ public class Cube : MonoBehaviour
     }
     private void DownScale(RaycastHit hit)
     {
-        c_DownScale();
+        if (HitOnMe(hit) == false) return;
+        if (currentCoroutine != null)
+            StopCoroutine(currentCoroutine);
+        currentCoroutine = StartCoroutine(c_DownScale());
     }
     IEnumerator c_DownScale()
     {
-        float currentTime = 0.0f;
-        Vector3 EndScale = new Vector3(1, 1, 1);
-        Vector3 StartScale = transform.localScale;
+        Vector3 StartScale = new Vector3(1, 1, 1);
+        Vector3 currentScale = transform.localScale;
+        Vector3 EndScale = new Vector3(1 + settings.AnimationScale,
+                                1 + settings.AnimationScale,
+                                1 + settings.AnimationScale);
+
+        float currentTime = (1- (currentScale.x-1) / (settings.AnimationScale))* settings.AnimationScaleTime;
+
         while (true)
         {
             currentTime += Time.deltaTime;
 
-            var newscale = Vector3.Lerp(StartScale,EndScale, currentTime / settings.AnimationScaleTime);
+            var newscale = Vector3.Lerp(StartScale,EndScale, 1-currentTime / settings.AnimationScaleTime);
             transform.localScale = newscale;
 
             yield return null;
@@ -63,4 +78,20 @@ public class Cube : MonoBehaviour
         }
     }
 
+    private void Select(RaycastHit hit)
+    {
+        UpScale(hit);
+    }
+    private void UnSelect(RaycastHit hit)
+    {
+        DownScale(hit);
+    }
+
+    private bool HitOnMe(RaycastHit hit)
+    {
+        var result = false;
+        if (hit.collider == null) return result;
+        if (hit.collider.gameObject == this.gameObject) result = true;
+        return result;
+    }
 }
