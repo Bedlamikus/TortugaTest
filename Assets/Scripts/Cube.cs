@@ -4,9 +4,10 @@ using UnityEngine;
 
 public class Cube : MonoBehaviour
 {
-    [SerializeField] private CubeSettings settings;
-    [SerializeField] private GameObject visual;
+    [SerializeField] private CubeSettings settings;                 //основные настройки куба, скорость аним, размер и т.д.
+    [SerializeField] private GameObject visual;                     //ссылка на визуальную компоненту для анимаций
 
+    //текущая задача анимация, перемещения и т.д. 
     private Coroutine currentCoroutine;
 
     void Start()
@@ -17,12 +18,44 @@ public class Cube : MonoBehaviour
             print("Not find <InputController>");
             return;
         }
-        inputcontroller.mouseDown.AddListener(UpScale);
-        inputcontroller.mouseUp.AddListener(DownScale);
+
+        //настраиваем слушателей
+        inputcontroller.mouseLeftDown.AddListener(Rotate);
+        //inputcontroller.mouseLeftUp.AddListener(DownScale);
         inputcontroller.mouseSelect.AddListener(Select);
         inputcontroller.mouseUnSelect.AddListener(UnSelect);
+
+        //задаем начальные настройки 
+        transform.localScale = new Vector3(settings.DefaultScale, settings.DefaultScale, settings.DefaultScale);
     }
 
+    // корутина поворот around X
+    private void Rotate(RaycastHit hit)
+    {
+        if (HitOnMe(hit) == false) return;
+        StartCoroutine(c_Rotate());
+    }
+    IEnumerator c_Rotate()
+    {
+        float StartAngle = settings.DefaultRotation;
+        float currentAngle = transform.localEulerAngles.x;
+        float EndAngle = settings.AnimationAngle + StartAngle;
+
+        float currentTime = ((currentAngle - settings.DefaultRotation) / (settings.AnimationAngle)) * settings.AnimationAngleTime;
+        while (true)
+        {
+            currentTime += Time.deltaTime;
+
+            var newAngle = Mathf.LerpAngle(StartAngle, EndAngle, currentTime / settings.AnimationAngleTime);
+            transform.localRotation = Quaternion.Euler(new Vector3(newAngle, 0, 0));
+
+            yield return null;
+
+            if (currentTime > settings.AnimationAngleTime) break;
+        }
+    }
+
+    // корутина увеличиваем loacalScale 
     private void UpScale(RaycastHit hit)
     {
         if (HitOnMe(hit) == false) return;
@@ -32,11 +65,14 @@ public class Cube : MonoBehaviour
     }
     IEnumerator c_UpScale()
     {
-        float currentTime = 0.0f;
-        Vector3 EndScale = new Vector3(1 + settings.AnimationScale,
-                                        1 + settings.AnimationScale,
-                                        1 + settings.AnimationScale);
-        Vector3 StartScale = transform.localScale;
+        Vector3 StartScale = new Vector3(settings.DefaultScale, settings.DefaultScale, settings.DefaultScale);
+        Vector3 currentScale = transform.localScale;
+        Vector3 EndScale = new Vector3(settings.AnimationScale,
+                                       settings.AnimationScale,
+                                       settings.AnimationScale) +
+                                       StartScale;
+
+        float currentTime = ((currentScale.x - settings.DefaultScale) / (settings.AnimationScale)) * settings.AnimationScaleTime;
         while (true)
         {
             currentTime += Time.deltaTime;
@@ -49,6 +85,8 @@ public class Cube : MonoBehaviour
             if (currentTime > settings.AnimationScaleTime) break;
         }
     }
+
+    // корутина уменьшаем localScale до начального состояния
     private void DownScale(RaycastHit hit)
     {
         if (HitOnMe(hit) == false) return;
@@ -58,13 +96,14 @@ public class Cube : MonoBehaviour
     }
     IEnumerator c_DownScale()
     {
-        Vector3 StartScale = new Vector3(1, 1, 1);
+        Vector3 StartScale = new Vector3(settings.DefaultScale, settings.DefaultScale, settings.DefaultScale);
         Vector3 currentScale = transform.localScale;
-        Vector3 EndScale = new Vector3(1 + settings.AnimationScale,
-                                1 + settings.AnimationScale,
-                                1 + settings.AnimationScale);
+        Vector3 EndScale = new Vector3(settings.AnimationScale,
+                                       settings.AnimationScale,
+                                       settings.AnimationScale) +
+                                       StartScale;
 
-        float currentTime = (1- (currentScale.x-1) / (settings.AnimationScale))* settings.AnimationScaleTime;
+        float currentTime = (1 - (currentScale.x - settings.DefaultScale) / (settings.AnimationScale)) * settings.AnimationScaleTime;
 
         while (true)
         {
@@ -78,15 +117,19 @@ public class Cube : MonoBehaviour
         }
     }
 
+    //выбор фишки
     private void Select(RaycastHit hit)
     {
         UpScale(hit);
     }
+
+    //отмена выбора фишки
     private void UnSelect(RaycastHit hit)
     {
         DownScale(hit);
     }
 
+    //проверка принадлежит ли этот hit нашему кубу
     private bool HitOnMe(RaycastHit hit)
     {
         var result = false;

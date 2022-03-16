@@ -59,6 +59,7 @@
     <Compile Include="Assets\Scripts\InputController.cs" />
     <Compile Include="Assets\Scripts\Cube.cs" />
     <Compile Include="Assets\Scripts\CubeSettings.cs" />
+    <Compile Include="Assets\Scripts\Board.cs" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">

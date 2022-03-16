@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
+
+//Отслеживание нажатых кнопок и прочего
+
 public class InputController : MonoBehaviour
 {
    
@@ -11,10 +14,10 @@ public class InputController : MonoBehaviour
     RaycastHit mouseMoveHit;    //хранит коллайдер под указателем
     Ray ray;
 
-    public UnityEvent<RaycastHit> mouseDown;
-    public UnityEvent<RaycastHit> mouseUp;
-    public UnityEvent<RaycastHit> mouseSelect;
-    public UnityEvent<RaycastHit> mouseUnSelect;
+    public UnityEvent<RaycastHit> mouseLeftDown;        //нажата левая кнопка мыши
+    public UnityEvent<RaycastHit> mouseLeftUp;          //отпущена левая кнопка мыши
+    public UnityEvent<RaycastHit> mouseSelect;          //Invoke если под мышкой сменился объект
+    public UnityEvent<RaycastHit> mouseUnSelect;        //Invoke если под мышкой сменился объект
 
     private void Start()
     {
@@ -25,20 +28,31 @@ public class InputController : MonoBehaviour
     void Update()
     {
         ray = m_camera.ScreenPointToRay(Input.mousePosition);
-        if (Input.GetButtonDown("Fire1"))
+        if (MouseLeftDown())
         {
-
             Physics.Raycast(ray, out currentHit, 100);
-            mouseDown?.Invoke(currentHit);
-
+            mouseLeftDown?.Invoke(currentHit);
         }
-        if (Input.GetButtonUp("Fire1"))
+        if (MouseLeftUp())
         {
-            mouseUp?.Invoke(currentHit);
+            mouseLeftUp?.Invoke(currentHit);
         }
         MouseMove();
     }
 
+    //если нажали левую кнопку мыши то вернет true
+    private bool MouseLeftDown()
+    {
+        if (Input.GetButtonDown("Fire1")) return true;
+        return false;
+    }
+    //если отпустили левую кнопку мыши то вернет true
+    private bool MouseLeftUp()
+    {
+        if (Input.GetButtonUp("Fire1")) return true;
+        return false;
+    }
+    // вызывает mouseSelect для текущего hit и mouseUnselect для прошлого
     private void MouseMove()
     {
         RaycastHit newMouseMoveHit;
