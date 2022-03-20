@@ -12,9 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e748bdd2e8952a4c9c740921be96de3, type: 3}
   m_Name: CubeSettings
   m_EditorClassIdentifier: 
+  ID: 0
   DefaultScale: 1
   AnimationScale: 0.2
   AnimationScaleTime: 0.1
   DefaultRotation: 0
   AnimationAngle: 180
   AnimationAngleTime: 0.5
+  AnimationMoveTime: 1

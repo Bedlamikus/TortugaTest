@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
+//направление свайпа
+public enum Direction { Left, Right, Up, Down, Idle }
 
 //Отслеживание нажатых кнопок и прочего
-
 public class InputController : MonoBehaviour
 {
    
@@ -14,10 +15,15 @@ public class InputController : MonoBehaviour
     RaycastHit mouseMoveHit;    //хранит коллайдер под указателем
     Ray ray;
 
-    public UnityEvent<RaycastHit> mouseLeftDown;        //нажата левая кнопка мыши
-    public UnityEvent<RaycastHit> mouseLeftUp;          //отпущена левая кнопка мыши
-    public UnityEvent<RaycastHit> mouseSelect;          //Invoke если под мышкой сменился объект
-    public UnityEvent<RaycastHit> mouseUnSelect;        //Invoke если под мышкой сменился объект
+    public UnityEvent<Collider> mouseLeftDown;        //нажата левая кнопка мыши
+    public UnityEvent<Collider> mouseLeftUp;          //отпущена левая кнопка мыши
+    public UnityEvent<Collider, Direction> mouseSwipe;
+    public UnityEvent<Collider> mouseSelect;          //Invoke если под мышкой сменился объект
+    public UnityEvent<Collider> mouseUnSelect;        //Invoke если под мышкой сменился объект
+
+    // вспомогательные переменные для свайпа
+    private Vector2 mouseLastPointDown;
+    private Vector2 mouseCurrentPoint;
 
     private void Start()
     {
@@ -31,11 +37,13 @@ public class InputController : MonoBehaviour
         if (MouseLeftDown())
         {
             Physics.Raycast(ray, out currentHit, 100);
-            mouseLeftDown?.Invoke(currentHit);
+            mouseLastPointDown = Input.mousePosition;
+            mouseLeftDown?.Invoke(currentHit.collider);
         }
         if (MouseLeftUp())
         {
-            mouseLeftUp?.Invoke(currentHit);
+            CheckSwipe();
+            mouseLeftUp?.Invoke(currentHit.collider);
         }
         MouseMove();
     }
@@ -59,9 +67,33 @@ public class InputController : MonoBehaviour
         Physics.Raycast(ray, out newMouseMoveHit, 100);
         if (newMouseMoveHit.collider != mouseMoveHit.collider)
         {
-            mouseUnSelect?.Invoke(mouseMoveHit);
+            mouseUnSelect?.Invoke(mouseMoveHit.collider);
             mouseMoveHit = newMouseMoveHit;
-            mouseSelect?.Invoke(mouseMoveHit);
+            mouseSelect?.Invoke(mouseMoveHit.collider);
         }
+        mouseCurrentPoint = Input.mousePosition;
+    }
+
+    //проверка на свайп и вызов MouseSwipe(currentHit, Direction)
+    private void CheckSwipe()
+    {
+        Direction result = Direction.Idle;
+
+        var direction = mouseLastPointDown - mouseCurrentPoint;
+        //print(direction+" = "+mouseLastPointDown+" - "+mouseCurrentPoint);
+        if (Mathf.Abs(direction.x) > Mathf.Abs(direction.y)*1.2)
+        {
+            result = Direction.Left;
+            if (direction.x < 0)
+                result = Direction.Right;
+        }
+        if (Mathf.Abs(direction.x)*1.2 < Mathf.Abs(direction.y))
+        {
+            result = Direction.Down;
+            if (direction.y < 0)
+                result = Direction.Up;
+        }
+        if (result != Direction.Idle)
+            mouseSwipe?.Invoke(currentHit.collider, result);
     }
 }

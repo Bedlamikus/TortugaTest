@@ -8,7 +8,10 @@ public class Cube : MonoBehaviour
     [SerializeField] private GameObject visual;                     //ссылка на визуальную компоненту для анимаций
 
     //текущая задача анимация, перемещения и т.д. 
-    private Coroutine currentCoroutine;
+    private Coroutine ScaleCoroutine;
+    private Coroutine MoveCoroutine;
+    public bool mooving;
+
 
     void Start()
     {
@@ -20,8 +23,8 @@ public class Cube : MonoBehaviour
         }
 
         //настраиваем слушателей
-        inputcontroller.mouseLeftDown.AddListener(Rotate);
-        //inputcontroller.mouseLeftUp.AddListener(DownScale);
+        //inputcontroller.mouseLeftDown.AddListener(Rotate);
+        //inputcontroller.mouseLeftUp.AddListener(Move);
         inputcontroller.mouseSelect.AddListener(Select);
         inputcontroller.mouseUnSelect.AddListener(UnSelect);
 
@@ -30,9 +33,9 @@ public class Cube : MonoBehaviour
     }
 
     // корутина поворот around X
-    private void Rotate(RaycastHit hit)
+    private void Rotate(Collider collider)
     {
-        if (HitOnMe(hit) == false) return;
+        if (HitOnMe(collider) == false) return;
         StartCoroutine(c_Rotate());
     }
     IEnumerator c_Rotate()
@@ -56,12 +59,12 @@ public class Cube : MonoBehaviour
     }
 
     // корутина увеличиваем loacalScale 
-    private void UpScale(RaycastHit hit)
+    private void UpScale(Collider collider)
     {
-        if (HitOnMe(hit) == false) return;
-        if (currentCoroutine != null)
-            StopCoroutine(currentCoroutine);
-        currentCoroutine = StartCoroutine(c_UpScale());
+        if (HitOnMe(collider) == false) return;
+        if (ScaleCoroutine != null)
+            StopCoroutine(ScaleCoroutine);
+        ScaleCoroutine = StartCoroutine(c_UpScale());
     }
     IEnumerator c_UpScale()
     {
@@ -87,12 +90,12 @@ public class Cube : MonoBehaviour
     }
 
     // корутина уменьшаем localScale до начального состояния
-    private void DownScale(RaycastHit hit)
+    private void DownScale(Collider collider)
     {
-        if (HitOnMe(hit) == false) return;
-        if (currentCoroutine != null)
-            StopCoroutine(currentCoroutine);
-        currentCoroutine = StartCoroutine(c_DownScale());
+        if (HitOnMe(collider) == false) return;
+        if (ScaleCoroutine != null)
+            StopCoroutine(ScaleCoroutine);
+        ScaleCoroutine = StartCoroutine(c_DownScale());
     }
     IEnumerator c_DownScale()
     {
@@ -118,23 +121,56 @@ public class Cube : MonoBehaviour
     }
 
     //выбор фишки
-    private void Select(RaycastHit hit)
+    private void Select(Collider collider)
     {
-        UpScale(hit);
+        UpScale(collider);
     }
 
     //отмена выбора фишки
-    private void UnSelect(RaycastHit hit)
+    private void UnSelect(Collider collider)
     {
-        DownScale(hit);
+        DownScale(collider);
     }
 
     //проверка принадлежит ли этот hit нашему кубу
-    private bool HitOnMe(RaycastHit hit)
+    public bool HitOnMe(Collider collider)
     {
         var result = false;
-        if (hit.collider == null) return result;
-        if (hit.collider.gameObject == this.gameObject) result = true;
+        if (collider == null) return result;
+        if (collider.gameObject == this.gameObject) result = true;
         return result;
+    }
+
+    //Возвращаем Scale
+    public Vector3 GetScale()
+    {
+        return new Vector3(settings.DefaultScale, settings.DefaultScale, settings.DefaultScale);
+    }
+
+
+    public void Move(Vector3 direction, float time)
+    {
+        if (mooving == true) return;
+        if (MoveCoroutine != null)
+            StopCoroutine(MoveCoroutine);
+        mooving = true;
+        MoveCoroutine = StartCoroutine(c_Move(direction, time));
+    }
+    IEnumerator  c_Move(Vector3 direction, float time)
+    {
+        Vector3 StartPoint = transform.position;
+        var EndPoint = new Vector3(direction.x, direction.y, direction.z);
+
+        float currentTime = 0;
+        while (true)
+        {
+            currentTime += Time.deltaTime;
+            var newPoint = Vector3.Lerp(StartPoint, EndPoint, currentTime / time);
+            transform.position = newPoint;
+
+            yield return null;
+            if (currentTime > time) break;
+        }
+        mooving = false;
     }
 }
