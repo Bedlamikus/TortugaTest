@@ -5,8 +5,14 @@ using UnityEngine;
 public class Cell
 {
     public Cube cube;
-    public bool active;
-    public int ID;
+    public bool destroy;
+    public float x;
+    public float y;
+    public float z;
+    public Cell()
+    {
+        destroy = false;
+    }
 }
 
 public class Board : MonoBehaviour
@@ -22,7 +28,7 @@ public class Board : MonoBehaviour
     [SerializeField] private List<Material> materials;
 
     //Доска с кубами
-    private Cube[,] board;
+    private Cell[,] board;
 
     //Переменные активного куба и его стартовых координат
     private Cube currentActiveCube;
@@ -38,17 +44,21 @@ public class Board : MonoBehaviour
     private void Start()
     {
         magnetic = false;
-        board = new Cube[m_Rows, m_Cols];
+        board = new Cell[m_Rows, m_Cols];
         for (int i = 0; i < m_Rows; i++)
             for (int j = 0; j<m_Cols; j++)
             {
+                board[i, j] = new Cell();
                 var scale = prefab.GetScale();
-                var point = new Vector3(transform.position.x + j * m_width / m_Cols - m_width/2+ scale.x*2,
-                                        transform.position.y,
-                                        transform.position.z + i * m_height / m_Rows - m_height/2);
-                board[i, j] = Instantiate(prefab, point, Quaternion.identity);
-                board[i, j].transform.parent = this.transform;
-                var render = board[i, j].GetComponentInChildren<Renderer>();
+                board[i, j].x = transform.position.x + j * m_width / m_Cols - m_width / 2 + scale.x * 2;
+                board[i, j].y = transform.position.y;
+                board[i, j].z = transform.position.z + i * m_height / m_Rows - m_height / 2;
+                var point = new Vector3(board[i, j].x,
+                                        board[i, j].y,
+                                        board[i, j].z);
+                board[i, j].cube = Instantiate(prefab, point, Quaternion.identity);
+                board[i, j].cube.transform.parent = this.transform;
+                var render = board[i, j].cube.GetComponentInChildren<Renderer>();
                 if (render != null) render.material = materials[Random.Range(0,materials.Count)];
             }
         var inputcontroller = FindObjectOfType<InputController>();
@@ -73,9 +83,9 @@ public class Board : MonoBehaviour
         Cube result = null;
         for (int i = 0; i < m_Rows; i++)
             for (int j = 0; j < m_Cols; j++)
-                if (board[i, j].HitOnMe(collider))
+                if (board[i, j].cube.HitOnMe(collider))
                 {
-                    result = board[i, j];
+                    result = board[i, j].cube;
                     break;
                 }
         return result;
@@ -83,10 +93,23 @@ public class Board : MonoBehaviour
 
     private Vector2 GetItem(Collider collider)
     {
-        Vector2 result = new Vector2(-1,-1);
+        Vector2 result = new Vector2(-1, -1);
         for (int i = 0; i < m_Rows; i++)
             for (int j = 0; j < m_Cols; j++)
-                if (board[i, j].HitOnMe(collider))
+                if (board[i, j].cube.HitOnMe(collider))
+                {
+                    result = new Vector2(i, j);
+                    break;
+                }
+        return result;
+    }
+
+    private Vector2 GetItem(Cube cube)
+    {
+        Vector2 result = new Vector2(-1, -1);
+        for (int i = 0; i < m_Rows; i++)
+            for (int j = 0; j < m_Cols; j++)
+                if (board[i, j].cube == cube)
                 {
                     result = new Vector2(i, j);
                     break;
@@ -117,7 +140,10 @@ public class Board : MonoBehaviour
         if (newcurrentActiveCube == currentActiveCube) return;
 
         currentActiveCube = newcurrentActiveCube;
-        CurrentActiveCubeStartPoint = currentActiveCube.transform.position;
+        var itemXZ = GetItem(collider);
+        CurrentActiveCubeStartPoint = new Vector3(board[(int)itemXZ.x, (int)itemXZ.y].x,
+                                                    board[(int)itemXZ.x, (int)itemXZ.y].y,
+                                                    board[(int)itemXZ.x, (int)itemXZ.y].z);
         currentActiveCollider = collider;
     }
     private void UnActiveCube(Collider collider)
@@ -132,15 +158,29 @@ public class Board : MonoBehaviour
                 ClearActiveCube();
                 return; 
             }
-            ResetCube(currentActiveCollider,CurrentActiveCubeStartPoint, m_swipeAnimationTime);
+            ResetCube(currentActiveCollider, m_swipeAnimationTime);
             ClearActiveCube();
         }
     }
-    private void ResetCube(Collider collider, Vector3 point, float time)
+    private void ResetCube(Collider collider, float time)
     {
         if (collider == null) return;
         var cube = GetCube(collider);
+        var point = GetPositionCell(collider);
         cube.Move(point, time);
+    }
+
+    private void SwipeCubes(Cube cubeOne, Cube cubeTwo, float time)
+    {
+        var itemOne = GetItem(cubeOne);
+        var itemTwo = GetItem(cubeTwo);
+        var positionOne = GetPositionCell(cubeOne);
+        var positionTwo = GetPositionCell(cubeTwo);
+        cubeOne.Move(positionTwo, time);
+        cubeTwo.Move(positionOne, time);
+        var transportCube = board[(int)itemOne.x, (int)itemOne.y].cube;
+        board[(int)itemOne.x, (int)itemOne.y].cube = cubeTwo;
+        board[(int)itemTwo.x, (int)itemTwo.y].cube = transportCube;
     }
 
     private bool Swipe()
@@ -150,58 +190,45 @@ public class Board : MonoBehaviour
         int x = (int)item.x;
         int y = (int)item.y;
         bool result = false;
-        Vector3 newpoint;
-        Cube transportCube;
+
         switch (swipeDirection)
         {
             case Direction.Down:
                 if (x <= 0) break;
-                swipeCube = board[x-1,y];       //second swipe cube
-                newpoint = swipeCube.transform.position;
-                swipeCube.Move(CurrentActiveCubeStartPoint, m_swipeAnimationTime);
-                currentActiveCube.Move(newpoint, m_swipeAnimationTime);
-                transportCube = board[x, y];
-                board[x, y] = swipeCube;
-                board[x - 1, y] = transportCube;
+
+                swipeCube = board[x-1,y].cube;       //second swipe cube
+                SwipeCubes(currentActiveCube, swipeCube, m_swipeAnimationTime);
+
                 swipeCube = null;
                 result = true;
                 break;
+                
             case Direction.Up:
                 if (x >= m_Rows-1) break;
-                swipeCube = board[x + 1, y];       //second swipe cube
-                newpoint = swipeCube.transform.position;
-                swipeCube.Move(CurrentActiveCubeStartPoint, m_swipeAnimationTime);
-                currentActiveCube.Move(newpoint, m_swipeAnimationTime);
-                transportCube = board[x, y];
-                board[x, y] = swipeCube;
-                board[x + 1, y] = transportCube;
+
+                swipeCube = board[x + 1, y].cube;       //second swipe cube
+                SwipeCubes(currentActiveCube, swipeCube, m_swipeAnimationTime);
+
                 swipeCube = null;
                 result = true;
                 break;
             case Direction.Left:
                 if (y <= 0) break;
-                swipeCube = board[x, y-1];       //second swipe cube
-                newpoint = swipeCube.transform.position;
-                swipeCube.Move(CurrentActiveCubeStartPoint, m_swipeAnimationTime);
-                currentActiveCube.Move(newpoint, m_swipeAnimationTime);
-                transportCube = board[x, y];
-                board[x, y] = swipeCube;
-                board[x, y-1] = transportCube;
+
+                swipeCube = board[x, y-1].cube;       //second swipe cube
+                SwipeCubes(currentActiveCube, swipeCube, m_swipeAnimationTime);
                 swipeCube = null;
                 result = true;
                 break;
             case Direction.Right:
                 if (y >= m_Cols-1) break;
-                swipeCube = board[x, y + 1];       //second swipe cube
-                newpoint = swipeCube.transform.position;
-                swipeCube.Move(CurrentActiveCubeStartPoint, m_swipeAnimationTime);
-                currentActiveCube.Move(newpoint, m_swipeAnimationTime);
-                transportCube = board[x, y];
-                board[x, y] = swipeCube;
-                board[x, y + 1] = transportCube;
+
+                swipeCube = board[x , y+1].cube;       //second swipe cube
+                SwipeCubes(currentActiveCube, swipeCube, m_swipeAnimationTime);
                 swipeCube = null;
                 result = true;
                 break;
+                
         }
         return result;
     }
@@ -215,5 +242,20 @@ public class Board : MonoBehaviour
         currentActiveCollider = null;
         CurrentActiveCubeStartPoint = Vector3.zero;
         magnetic = false;
+    }
+
+    private Vector3 GetPositionCell(Collider collider)
+    {
+        var itemXZ = GetItem(collider);
+        return new Vector3(board[(int)itemXZ.x, (int)itemXZ.y].x,
+                            board[(int)itemXZ.x, (int)itemXZ.y].y,
+                            board[(int)itemXZ.x, (int)itemXZ.y].z);
+    }
+    private Vector3 GetPositionCell(Cube cube)
+    {
+        var itemXZ = GetItem(cube);
+        return new Vector3(board[(int)itemXZ.x, (int)itemXZ.y].x,
+                            board[(int)itemXZ.x, (int)itemXZ.y].y,
+                            board[(int)itemXZ.x, (int)itemXZ.y].z);
     }
 }

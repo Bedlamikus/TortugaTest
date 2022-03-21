@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ID: 0
   DefaultScale: 1
-  AnimationScale: 0.2
+  AnimationScale: 0.25
   AnimationScaleTime: 0.1
   DefaultRotation: 0
   AnimationAngle: 180
-  AnimationAngleTime: 0.5
+  AnimationAngleTime: 0.2
   AnimationMoveTime: 1

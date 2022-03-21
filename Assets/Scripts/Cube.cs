@@ -6,16 +6,18 @@ public class Cube : MonoBehaviour
 {
     [SerializeField] private CubeSettings settings;                 //основные настройки куба, скорость аним, размер и т.д.
     [SerializeField] private GameObject visual;                     //ссылка на визуальную компоненту для анимаций
+    [SerializeField] private GameObject VFXDeath;
 
     //текущая задача анимация, перемещения и т.д. 
     private Coroutine ScaleCoroutine;
     private Coroutine MoveCoroutine;
     public bool mooving;
 
+    private InputController inputcontroller;
 
     void Start()
     {
-        var inputcontroller = FindObjectOfType<InputController>();
+        inputcontroller = FindObjectOfType<InputController>();
         if (inputcontroller == null)
         {
             print("Not find <InputController>");
@@ -173,4 +175,17 @@ public class Cube : MonoBehaviour
         }
         mooving = false;
     }
+
+    public void Death()
+    {
+        mooving = true;
+        if (VFXDeath != null)
+        {
+            Instantiate(VFXDeath, transform.position, Quaternion.identity);
+        }
+        inputcontroller.mouseSelect.RemoveListener(Select);
+        inputcontroller.mouseUnSelect.RemoveListener(UnSelect);
+        Destroy(gameObject);
+    }
+
 }
